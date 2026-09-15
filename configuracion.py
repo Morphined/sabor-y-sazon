@@ -1,6 +1,5 @@
 CLAVE_ACCESO = "1793"
 AUTOR = "Juan Fernando Capitani Giraldo"
-GRUPO = "229"
 NOMBRE_APLICACION = "Sabor & Sazón - Control Gastronómico"
 
 PRECIOS_MENU = {

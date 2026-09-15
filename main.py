@@ -17,7 +17,6 @@ from configuracion import (
     ERROR,
     EXITO,
     FONDO,
-    GRUPO,
     NOMBRE_APLICACION,
     PANEL,
     PRECIOS_MENU,
@@ -56,7 +55,7 @@ def configurar_dpi_windows() -> None:
 
     try:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-            "UNAD.EstructuraDatos.Grupo229.SaborSazon.V4"
+            "SaborSazon.ControlGastronomico.Desktop"
         )
     except Exception:
         pass
@@ -192,7 +191,29 @@ class AplicacionSaborSazon:
             "TCombobox",
             padding=7,
             arrowsize=15,
-            fieldbackground="white",
+            fieldbackground=PANEL,
+        )
+
+        # El selector de menú permanece readonly para impedir texto libre,
+        # pero visualmente se muestra como un control activo y seleccionable.
+        estilo.configure(
+            "Menu.TCombobox",
+            padding=7,
+            arrowsize=17,
+            fieldbackground=PANEL,
+            background=ACENTO,
+            foreground=TEXTO,
+            arrowcolor=PRIMARIO,
+            bordercolor=BORDE,
+            lightcolor=BORDE,
+            darkcolor=BORDE,
+        )
+        estilo.map(
+            "Menu.TCombobox",
+            fieldbackground=[("readonly", PANEL)],
+            foreground=[("readonly", TEXTO)],
+            background=[("readonly", ACENTO), ("active", BORDE)],
+            arrowcolor=[("readonly", PRIMARIO), ("active", PRIMARIO_OSCURO)],
         )
 
     def _vaciar_raiz(self) -> None:
@@ -241,7 +262,7 @@ class AplicacionSaborSazon:
         insignia.grid(row=0, column=2, rowspan=2, padx=(12, 24), pady=18, sticky="e")
         tk.Label(
             insignia,
-            text=f"GRUPO {GRUPO}",
+            text="DESKTOP APP",
             font=("Segoe UI", 9, "bold"),
             bg=ACENTO,
             fg=PRIMARIO,
@@ -436,7 +457,7 @@ class AplicacionSaborSazon:
             command=self.confirmar_salida,
         ).pack(side="left", padx=6)
 
-        pie = self._pie(self.raiz, "Fase 2 · Fundamentos de Abstracción y Modelado de Datos")
+        pie = self._pie(self.raiz, "Gestión de clientes · Control gastronómico")
         pie.grid(row=2, column=0, sticky="ew", padx=28, pady=(0, 10))
 
     def validar_acceso(self) -> None:
@@ -510,7 +531,7 @@ class AplicacionSaborSazon:
         self._label(tarjeta_form, "Género", 3, 0)
         zona_genero = tk.Frame(tarjeta_form, bg=PANEL)
         zona_genero.grid(row=3, column=1, sticky="w", padx=10, pady=self._pady_campo())
-        self._toggle_genero(zona_genero)
+        self._radio_genero(zona_genero)
 
         self._label(tarjeta_form, "Fecha de registro", 3, 2)
         entrada_fecha = self._entry(tarjeta_form, self.fecha, 3, 3, estado="readonly")
@@ -527,6 +548,8 @@ class AplicacionSaborSazon:
             textvariable=self.menu,
             values=list(PRECIOS_MENU),
             state="readonly",
+            style="Menu.TCombobox",
+            cursor="hand2",
             font=("Segoe UI", 10),
         )
         selector.grid(row=6, column=1, sticky="ew", padx=(8, 24), pady=self._pady_campo())
@@ -542,14 +565,24 @@ class AplicacionSaborSazon:
         entrada_costo.configure(readonlybackground="#FAF7F4", fg=PRIMARIO)
         tk.Label(
             tarjeta_form,
-            text="Se asigna automáticamente de acuerdo con el menú seleccionado.",
+            text="El costo por sesión se asigna automáticamente de acuerdo con el menú seleccionado.",
             font=("Segoe UI", 9, "italic"),
             bg=PANEL,
             fg=TEXTO_SUAVE,
-        ).grid(row=7, column=2, columnspan=2, sticky="w", padx=12)
+            anchor="w",
+            justify="left",
+            wraplength=620,
+        ).grid(
+            row=8,
+            column=0,
+            columnspan=4,
+            sticky="ew",
+            padx=(4, 24),
+            pady=(0, 4),
+        )
 
         acciones = tk.Frame(tarjeta_form, bg=PANEL)
-        acciones.grid(row=8, column=0, columnspan=4, pady=(20, 4))
+        acciones.grid(row=9, column=0, columnspan=4, pady=(16, 4))
         ttk.Button(acciones, text="Guardar registro", style="Accion.TButton", command=self.guardar_registro).pack(side="left", padx=5)
         ttk.Button(acciones, text="Calcular / Mostrar reporte", style="Suave.TButton", command=self.mostrar_reporte).pack(side="left", padx=5)
         ttk.Button(acciones, text="Salir", style="Salir.TButton", command=self.confirmar_salida).pack(
@@ -656,39 +689,53 @@ class AplicacionSaborSazon:
             fg=TEXTO_SUAVE,
         ).pack(anchor="w", pady=(2, 0))
 
-    def _toggle_genero(self, zona: tk.Frame) -> None:
+    def _radio_genero(self, zona: tk.Frame) -> None:
+        """Crea Radio Buttons estilizados con selección mutuamente excluyente."""
         opciones = ("Masculino", "Femenino")
-        self._btns_genero: dict[str, tk.Label] = {}
+        self._radios_genero: dict[str, tk.Radiobutton] = {}
+
         for opcion in opciones:
-            btn = tk.Label(
+            radio = tk.Radiobutton(
                 zona,
                 text=opcion,
+                variable=self.genero,
+                value=opcion,
+                indicatoron=False,
                 font=("Segoe UI", 10),
                 padx=14,
                 pady=6,
                 cursor="hand2",
                 relief="solid",
                 bd=1,
+                selectcolor=PRIMARIO,
+                activebackground=ACENTO,
+                activeforeground=TEXTO,
+                command=self._actualizar_estilo_genero,
             )
-            btn.pack(side="left", padx=(0, 8))
-            btn.bind("<Button-1>", lambda _e, op=opcion: self._seleccionar_genero(op))
-            self._btns_genero[opcion] = btn
-        self._seleccionar_genero("Masculino")
+            radio.pack(side="left", padx=(0, 8))
+            self._radios_genero[opcion] = radio
 
-    def _seleccionar_genero(self, opcion: str) -> None:
-        self.genero.set(opcion)
-        for op, btn in self._btns_genero.items():
-            if op == opcion:
-                btn.configure(
+        self.genero.set("Masculino")
+        self._actualizar_estilo_genero()
+
+    def _actualizar_estilo_genero(self) -> None:
+        seleccion = self.genero.get()
+        for opcion, radio in self._radios_genero.items():
+            if opcion == seleccion:
+                radio.configure(
                     bg=PRIMARIO,
                     fg="white",
+                    activebackground=PRIMARIO_OSCURO,
+                    activeforeground="white",
                     highlightbackground=PRIMARIO,
                     highlightthickness=1,
                 )
             else:
-                btn.configure(
+                radio.configure(
                     bg=PANEL,
                     fg=TEXTO,
+                    activebackground=ACENTO,
+                    activeforeground=TEXTO,
                     highlightbackground=BORDE,
                     highlightthickness=1,
                 )
@@ -985,7 +1032,7 @@ if __name__ == "__main__":
 # RESUMEN DE CAMBIOS VISUALES
 # - _configurar_estilos: estilos especiales para botones de acceso y jerarquía.
 # - _subtitulo_en_grid: secciones convertidas en barras con ACENTO_SUAVE y borde PRIMARIO.
-# - mostrar_registro: género como toggles, fecha readonly diferenciada y separación del botón Salir.
+# - mostrar_registro: género mediante Radio Buttons estilizados, fecha readonly diferenciada y separación del botón Salir.
 # - _fila_resumen: separadores entre filas y acento superior para "Total estimado".
 # - mostrar_reporte: filas separadas, bloque total en PRIMARIO, monto ampliado y cierre secundario.
 # - mostrar_acceso: mantiene campo de contraseña prominente y botones con jerarquía diferenciada.
